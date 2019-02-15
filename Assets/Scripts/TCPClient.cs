@@ -4,6 +4,11 @@ using System.IO;
 using System.Net.Sockets;
 using UnityEngine.XR;
 
+//public class GameManager
+//{
+//    void Update()
+//}
+
 public class GameData
 {
     public enum GameState : int
@@ -97,7 +102,7 @@ public class TCPClient : MonoBehaviour
             print("reset game");
             writeSocket("'reset',");
         }
-        
+
         while(theStream.DataAvailable)
         {
             string receivedString = readSocket();
