@@ -7,13 +7,19 @@ public class PlayerController : MonoBehaviour
     // Start is called before the first frame update
     private Animator animator;
     private BezierWalker walkerComp;
+
+    public GameObject cam;
+
+    private bool isConnect = false;
     float progess;
     private float speed = 0f;
     void Start()
     {
+        cam.SetActive(false);
         animator = GetComponentInChildren(typeof(Animator), true) as Animator;
         walkerComp = GetComponent<BezierWalker>();
         progess = 0f;
+        isConnect = false;
 
     }
 
@@ -21,6 +27,23 @@ public class PlayerController : MonoBehaviour
     public void SetSpeed(float speed)
     {
         this.speed = speed;
+    }
+
+    public void SetConection(bool param)
+    {
+        Debug.Log("Param:" + param);
+        isConnect = param;
+        if(param)
+        {
+            
+            cam.SetActive(true);
+        }
+    }
+
+
+    public bool GetConnectionFlag()
+    {
+        return isConnect;
     }
     void Update()
     {
@@ -31,6 +54,7 @@ public class PlayerController : MonoBehaviour
         // else {
         //     this.SetSpeed(0f);
         // }
+        
         Debug.Log("Speed: " + this.speed);
         animator.speed = this.speed;
         //this.transform.position += new Vector3(0,0, 0.1f)

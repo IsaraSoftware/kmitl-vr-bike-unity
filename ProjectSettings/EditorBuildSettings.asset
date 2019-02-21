@@ -6,12 +6,12 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/Start.unity
+    guid: 3afbe898af34cfd49a621bfa0fe671e0
+  - enabled: 1
     path: Assets/Example/ArduinoHM10Test/ArduinoHM10Test.unity
     guid: d8c17b59e0cb44d9aa604b9b8c326e9f
   - enabled: 1
     path: Assets/Scenes/Game.unity
     guid: c7598e526b0fe412bad43380bb66e2c1
-  - enabled: 1
-    path: Assets/Scenes/Start.unity
-    guid: 3afbe898af34cfd49a621bfa0fe671e0
   m_configObjects: {}

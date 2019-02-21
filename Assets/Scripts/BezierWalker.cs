@@ -20,6 +20,8 @@ public class BezierWalker : MonoBehaviour
     private void Awake()
     {
         spline = BezierSpline.GetSplineOfPlayer(targetSplineId);
+        tickToCalculateCache = true;
+        PrepareCache();
     }
 
     private void Start()
@@ -30,9 +32,13 @@ public class BezierWalker : MonoBehaviour
 
     void Update()
     {
-        InterpolatePositionAndRotation(progress);
+        if (GetComponent<ArduinoHM10Test>().GetLocal())
+        {
+            InterpolatePositionAndRotation(progress);
 
-        if(progress > 1)
+        }
+
+        if (progress > 1)
             progress = 0;
     }
 
@@ -51,27 +57,35 @@ public class BezierWalker : MonoBehaviour
         this.progress = newProgress;
     }
 
+    public void SetSlineID(int inp)
+    {
+        targetSplineId = inp;
+        spline = BezierSpline.GetSplineOfPlayer(targetSplineId);
+    }
+
     // helpers
     private void InterpolatePositionAndRotation(float percent)
     {
+
+
         float normalizedT = MapPercentToBeziereRatio(progress);
         Vector3 resultPosition = spline.GetPoint(normalizedT);
 
         //do raycast and lerp y
-        Ray ray = new Ray(transform.position + Vector3.up*3, Vector3.down);
+        Ray ray = new Ray(transform.position + Vector3.up * 3, Vector3.down);
         RaycastHit hit;
-          
+
         //if the ray has hit something  
-        if(Physics.Raycast(ray.origin,ray.direction, out hit, 10))//cast the ray 5 units at the specified direction    
+        if (Physics.Raycast(ray.origin, ray.direction, out hit, 10))//cast the ray 5 units at the specified direction    
         {
             float hitY = hit.point.y;
             float posY = transform.position.y;
-            float properY = Mathf.Lerp(posY, hitY, Time.deltaTime*10);
+            float properY = Mathf.Lerp(posY, hitY, Time.deltaTime * 10);
             resultPosition.y = properY;
         }
 
         transform.position = resultPosition;
-        transform.rotation = Quaternion.Lerp(transform.rotation,Quaternion.LookRotation(spline.GetTangent(normalizedT)), Time.deltaTime*5);
+        transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.LookRotation(spline.GetTangent(normalizedT)), Time.deltaTime * 5);
     }
 
     private float MapPercentToBeziereRatio(float percent)

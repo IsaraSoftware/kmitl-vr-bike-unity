@@ -181,12 +181,12 @@ MonoBehaviour:
   m_ScriptCRCCheck: 1
   m_MaxDelay: 0.01
   m_LogLevel: 2
-  m_PlayerPrefab: {fileID: 7573154031702740430, guid: 0425970b9d645ea4899afc623865b222,
+  m_PlayerPrefab: {fileID: 1153034883679508, guid: a028013ceb53846c4b34b0c7befd9bad,
     type: 3}
   m_AutoCreatePlayer: 1
   m_PlayerSpawnMethod: 0
   m_OfflineScene: Start
-  m_OnlineScene: Game
+  m_OnlineScene: ArduinoHM10Test
   m_SpawnPrefabs: []
   m_CustomConfig: 0
   m_MaxConnections: 4
