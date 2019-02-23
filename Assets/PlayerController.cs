@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
 {
@@ -54,7 +55,11 @@ public class PlayerController : MonoBehaviour
         // else {
         //     this.SetSpeed(0f);
         // }
-        
+        if(SceneManager.GetActiveScene().name == "ArduinoHM10Test" && gameObject.GetComponent<ArduinoHM10Test>().enabled == false)
+        {
+            Debug.Log("Create BLE");
+            gameObject.GetComponent<ArduinoHM10Test>().enabled = true;
+        }
         Debug.Log("Speed: " + this.speed);
         animator.speed = this.speed;
         //this.transform.position += new Vector3(0,0, 0.1f)

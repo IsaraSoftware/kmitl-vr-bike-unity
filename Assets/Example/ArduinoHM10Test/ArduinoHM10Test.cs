@@ -24,6 +24,8 @@ public class ArduinoHM10Test : NetworkBehaviour
     public Text TextToSend;
     public PlayerController player;
 
+    private bool mutexLock = false;
+
     enum States
     {
         None,
@@ -34,8 +36,8 @@ public class ArduinoHM10Test : NetworkBehaviour
         Disconnect,
         Communication,
     }
-     [SyncVar]
-     public int playersConnected;
+    [SyncVar]
+    public int playersConnected;
 
     private bool _workingFoundDevice = true;
     private bool _connected = false;
@@ -53,7 +55,7 @@ public class ArduinoHM10Test : NetworkBehaviour
         {
             if (string.IsNullOrEmpty(TextToSend.text))
             {
-                BluetoothStatus.text = "Enter text to send...";
+                //BluetoothStatus.text = "Enter text to send...";
             }
             else
             {
@@ -74,7 +76,7 @@ public class ArduinoHM10Test : NetworkBehaviour
         _state = States.None;
         _foundID = false;
         _hm10 = null;
-        PanelMiddle.SetActive(false);
+        //PanelMiddle.SetActive(false);
     }
 
     void SetState(States newState, float timeout)
@@ -86,13 +88,14 @@ public class ArduinoHM10Test : NetworkBehaviour
     void StartProcess()
     {
         //        BluetoothStatus.text = "Initializing...";
+        Debug.Log("Start Process");
 
         Reset();
         BluetoothLEHardwareInterface.Initialize(true, false, () =>
         {
 
             SetState(States.Scan, 0.1f);
-            BluetoothStatus.text = "Initialized";
+            //BluetoothStatus.text = "Initialized";
 
         }, (error) =>
         {
@@ -104,29 +107,33 @@ public class ArduinoHM10Test : NetworkBehaviour
     // Use this for initialization
     void Start()
     {
+        Debug.Log("Start");
         //HM10_Status.text = "";
-        UnityEngine.XR.XRSettings.enabled = false;
-        StartProcess();
+        //UnityEngine.XR.XRSettings.enabled = false;
+        //StartProcess();
     }
 
     void Awake()
     {
+        //HM10_Status.text = "";
+        Debug.Log("Start BLE");
+        StartProcess();
         DontDestroyOnLoad(this.gameObject);
     }
 
     // Update is called once per frame
     int GetConnectionCount()
-         {
-             int count = 0;
-             foreach (NetworkConnection con in NetworkServer.connections)
-             {
-                 if (con != null)
-                     count++;
-             }
-             return count;
-         }
+    {
+        int count = 0;
+        foreach (NetworkConnection con in NetworkServer.connections)
+        {
+            if (con != null)
+                count++;
+        }
+        return count;
+    }
 
-        
+
     public bool GetLocal()
     {
         return isLocalPlayer;
@@ -134,222 +141,200 @@ public class ArduinoHM10Test : NetworkBehaviour
     void Update()
     {
 
-        if (SceneManager.GetActiveScene().name != "Game")
-        {
-            GetComponent<BezierWalker>().enabled = false;
-            SceneManager.LoadScene("Game");
-            //UnityEngine.XR.XRSettings.enabled = true;
-            print("Load Scene");
-            
 
-        }
 
-        if (!isLocalPlayer)
-        {
-            return;
-        }
-
-        
         
 
 
 
-        if (SceneManager.GetActiveScene().name == "Game")
+
+
+
+
+        if (_timeout > 0f)
         {
-            GetComponent<BezierWalker>().enabled = true;
-            player = GetComponent<PlayerController>();
-            player.SetConection(true);
-            print(playerControllerId);
-            GetComponent<BezierWalker>().SetSlineID(1);
-            player.SetSpeed(1);
+            _timeout -= Time.deltaTime;
+            if (_timeout <= 0f)
+            {
+                _timeout = 0f;
 
+                switch (_state)
+                {
+                    case States.None:
+                        break;
+
+                    case States.Scan:
+                        //BluetoothStatus.text = "Scanning for Wahoo SPEED devices...";
+                        Debug.Log("Scanning");
+                        BluetoothLEHardwareInterface.ScanForPeripheralsWithServices(null, (address, name) =>
+                        {
+
+                            // we only want to look at devices that have the name we are looking for
+                            // this is the best way to filter out devices
+
+                            DeviceName = "Wahoo SPEED";
+                            Debug.Log("Name:" + DeviceName);
+                            Debug.Log("NameName:" + name);
+                            if (name.Contains(DeviceName))
+                            {
+                                _workingFoundDevice = true;
+
+                                // it is always a good idea to stop scanning while you connect to a device
+                                // and get things set up
+                                BluetoothLEHardwareInterface.StopScan();
+                                //BluetoothStatus.text = "";
+
+                                // add it to the list and set to connect to it
+                                _hm10 = address;
+
+                                Debug.Log(_hm10);
+
+                                //HM10_Status.text = "Found Wahoo SPEED";
+
+                                SetState(States.Connect, 0.5f);
+
+                                _workingFoundDevice = false;
+                            }
+
+                        }, null, false, false);
+                        break;
+
+                    case States.Connect:
+                        // set these flags
+                        _foundID = false;
+
+                        //HM10_Status.text = "Connecting to Wahoo SPEED";
+                        Debug.Log("Beep Boop Connect mode Avtivated!!");
+                        // note that the first parameter is the address, not the name. I have not fixed this because
+                        // of backwards compatiblity.
+                        // also note that I am note using the first 2 callbacks. If you are not looking for specific characteristics you can use one of
+                        // the first 2, but keep in mind that the device will enumerate everything and so you will want to have a timeout
+                        // large enough that it will be finished enumerating before you try to subscribe or do any other operations.
+                        BluetoothLEHardwareInterface.ConnectToPeripheral(_hm10, (name) =>
+                        {
+                            Debug.Log("Connected to " + name);
+                        }, (str1, str2) =>
+                        {
+                            Debug.Log("What this 1? :" + str1);
+                            Debug.Log("What this 2? :" + str2);
+                        }, (address, serviceUUID, characteristicUUID) =>
+                        {
+                            ServiceUUID = "1816";
+                            Characteristic = "2A5B";
+                            Debug.Log("Service" + ServiceUUID);
+                            Debug.Log("CharacteristicUUID" + Characteristic);
+                            if (IsEqual(serviceUUID, ServiceUUID))
+                            {
+                                // if we have found the characteristic that we are waiting for
+                                // set the state. make sure there is enough timeout that if the
+                                // device is still enumerating other characteristics it finishes
+                                // before we try to subscribe
+                                if (IsEqual(characteristicUUID, Characteristic))
+                                {
+                                    _connected = true;
+                                    SetState(States.Subscribe, 2f);
+
+                                   // HM10_Status.text = "Connected to Wahoo SPEED";
+                                }
+                            }
+                        }, (disconnectedAddress) =>
+                        {
+                            BluetoothLEHardwareInterface.Log("Device disconnected: " + disconnectedAddress);
+                           // HM10_Status.text = "Disconnected";
+                        });
+                        break;
+
+                    case States.Subscribe:
+                        //HM10_Status.text = "Subscribing to Wahoo SPEED CSC service";
+
+                        BluetoothLEHardwareInterface.SubscribeCharacteristicWithDeviceAddress(_hm10, ServiceUUID, Characteristic, null, (address, characteristicUUID, bytes) =>
+                        {
+                            if (!mutexLock)
+                            {
+                                mutexLock = true;
+                                String inp = BitConverter.ToString(bytes);
+                                Debug.Log(inp);
+                                Debug.Log("Active Scene" + SceneManager.GetActiveScene().name);
+                                //HM10_Status.text = BitConverter.ToString(bytes);
+                                if (SceneManager.GetActiveScene().name != "Game")
+                                {
+                                    GetComponent<BezierWalker>().enabled = false;
+                                    SceneManager.LoadScene("Game");
+                                    UnityEngine.XR.XRSettings.enabled = true;
+                                    
+                                    print("Load Game");
+
+
+                                }
+
+                                
+
+                                if (SceneManager.GetActiveScene().name == "Game")
+                                {
+                                    GetComponent<BezierWalker>().enabled = true;
+                                    
+                                    player = GetComponent<PlayerController>();
+                                    player.SetConection(true);
+                                    print("Player ID:" + this.netId);
+                                    GetComponent<BezierWalker>().SetSlineID(int.Parse(this.netId.ToString()) - 1);
+                                    if (inp != lastInp)
+                                    {
+                                        player.SetSpeed(1f);
+                                        lastInp = inp;
+                                    }
+                                    else
+                                    {
+                                        player.SetSpeed(0f);
+                                    }
+
+
+                                }
+                                mutexLock = false;
+
+                            }
+
+
+
+
+                        });
+
+                        // set to the none state and the user can start sending and receiving data
+                        //_state = States.None;
+                        //HM10_Status.text = "Waiting...";
+
+                        //PanelMiddle.SetActive(true);
+                        break;
+
+                    case States.Unsubscribe:
+                        BluetoothLEHardwareInterface.UnSubscribeCharacteristic(_hm10, ServiceUUID, Characteristic, null);
+                        SetState(States.Disconnect, 4f);
+                        break;
+
+                    case States.Disconnect:
+                        if (_connected)
+                        {
+                            BluetoothLEHardwareInterface.DisconnectPeripheral(_hm10, (address) =>
+                            {
+                                BluetoothLEHardwareInterface.DeInitialize(() =>
+                                {
+
+                                    _connected = false;
+                                    _state = States.None;
+                                });
+                            });
+                        }
+                        else
+                        {
+                            BluetoothLEHardwareInterface.DeInitialize(() =>
+                            {
+
+                                _state = States.None;
+                            });
+                        }
+                        break;
+                }
+            }
         }
-        // if (_timeout > 0f)
-        // {
-        //     _timeout -= Time.deltaTime;
-        //     if (_timeout <= 0f)
-        //     {
-        //         _timeout = 0f;
-
-        //         switch (_state)
-        //         {
-        //             case States.None:
-        //                 break;
-
-        //             case States.Scan:
-        //                 BluetoothStatus.text = "Scanning for Wahoo SPEED devices...";
-        //                 Debug.Log("Scanning");
-        //                 BluetoothLEHardwareInterface.ScanForPeripheralsWithServices(null, (address, name) =>
-        //                 {
-
-        //                     // we only want to look at devices that have the name we are looking for
-        //                     // this is the best way to filter out devices
-
-        //                     DeviceName = "Wahoo SPEED";
-        //                     Debug.Log("Name:" + DeviceName);
-        //                     Debug.Log("NameName:" + name);
-        //                     if (name.Contains(DeviceName))
-        //                     {
-        //                         _workingFoundDevice = true;
-
-        //                         // it is always a good idea to stop scanning while you connect to a device
-        //                         // and get things set up
-        //                         BluetoothLEHardwareInterface.StopScan();
-        //                         BluetoothStatus.text = "";
-
-        //                         // add it to the list and set to connect to it
-        //                         _hm10 = address;
-
-        //                         Debug.Log(_hm10);
-
-        //                         HM10_Status.text = "Found Wahoo SPEED";
-
-        //                         SetState(States.Connect, 0.5f);
-
-        //                         _workingFoundDevice = false;
-        //                     }
-
-        //                 }, null, false, false);
-        //                 break;
-
-        //             case States.Connect:
-        //                 // set these flags
-        //                 _foundID = false;
-
-        //                 HM10_Status.text = "Connecting to Wahoo SPEED";
-        //                 Debug.Log("Beep Boop Connect mode Avtivated!!");
-        //                 // note that the first parameter is the address, not the name. I have not fixed this because
-        //                 // of backwards compatiblity.
-        //                 // also note that I am note using the first 2 callbacks. If you are not looking for specific characteristics you can use one of
-        //                 // the first 2, but keep in mind that the device will enumerate everything and so you will want to have a timeout
-        //                 // large enough that it will be finished enumerating before you try to subscribe or do any other operations.
-        //                 BluetoothLEHardwareInterface.ConnectToPeripheral(_hm10, (name) =>
-        //                 {
-        //                     Debug.Log("Connected to " + name);
-        //                 }, (str1, str2) =>
-        //                 {
-        //                     Debug.Log("What this 1? :" + str1);
-        //                     Debug.Log("What this 2? :" + str2);
-        //                 }, (address, serviceUUID, characteristicUUID) =>
-        //                 {
-        //                     ServiceUUID = "1816";
-        //                     Characteristic = "2A5B";
-        //                     Debug.Log("Service" + ServiceUUID);
-        //                     Debug.Log("CharacteristicUUID" + Characteristic);
-        //                     if (IsEqual(serviceUUID, ServiceUUID))
-        //                     {
-        //                         // if we have found the characteristic that we are waiting for
-        //                         // set the state. make sure there is enough timeout that if the
-        //                         // device is still enumerating other characteristics it finishes
-        //                         // before we try to subscribe
-        //                         if (IsEqual(characteristicUUID, Characteristic))
-        //                         {
-        //                             _connected = true;
-        //                             SetState(States.Subscribe, 2f);
-
-        //                             HM10_Status.text = "Connected to Wahoo SPEED";
-        //                         }
-        //                     }
-        //                 }, (disconnectedAddress) =>
-        //                 {
-        //                     BluetoothLEHardwareInterface.Log("Device disconnected: " + disconnectedAddress);
-        //                     HM10_Status.text = "Disconnected";
-        //                 });
-        //                 break;
-
-        //             case States.Subscribe:
-        //                 //HM10_Status.text = "Subscribing to Wahoo SPEED CSC service";
-
-        //                 BluetoothLEHardwareInterface.SubscribeCharacteristicWithDeviceAddress(_hm10, ServiceUUID, Characteristic, null, (address, characteristicUUID, bytes) =>
-        //                 {
-        //                     String inp = BitConverter.ToString(bytes);
-        //                     Debug.Log(inp);
-
-        //                     //HM10_Status.text = BitConverter.ToString(bytes);
-        //                     if (SceneManager.GetActiveScene().name != "Game")
-        //                     {
-        //                         SceneManager.LoadScene("Game");
-        //                         UnityEngine.XR.XRSettings.enabled = true;
-        //                     }
-
-        //                     if(!isLocalPlayer)
-        //                     {
-        //                         return;
-        //                     }
-
-        //                     if (this.player == null)
-        // {
-        //     foreach (GameObject gameObj in GameObject.FindObjectsOfType<GameObject>())
-        //     {
-        //         if (gameObj.name.Contains("Player Object"))
-        //         {
-        //             if(!gameObj.GetComponent<PlayerController>().GetConnectionFlag())
-        //             {
-        //                 this.player = gameObj.GetComponent<PlayerController>();
-        //                 gameObj.GetComponent<PlayerController>().SetConection(true);
-        //             }
-
-
-
-        //                             }
-        //                         }
-
-        //                     }
-
-        //                     else if (this.player != null)
-        //                     {
-        //                         Debug.Log("Player Moving");
-        //                         if (inp != lastInp)
-        //                         {
-        //                             player.SetSpeed(1f);
-        //                             lastInp = inp;
-
-        //                         }
-        //                         else
-        //                         {
-        //                             player.SetSpeed(0f);
-        //                         }
-        //                     }
-
-        //                 });
-
-        //                 // set to the none state and the user can start sending and receiving data
-        //                 //_state = States.None;
-        //                 //HM10_Status.text = "Waiting...";
-
-        //                 //PanelMiddle.SetActive(true);
-        //                 break;
-
-        //             case States.Unsubscribe:
-        //                 BluetoothLEHardwareInterface.UnSubscribeCharacteristic(_hm10, ServiceUUID, Characteristic, null);
-        //                 SetState(States.Disconnect, 4f);
-        //                 break;
-
-        //             case States.Disconnect:
-        //                 if (_connected)
-        //                 {
-        //                     BluetoothLEHardwareInterface.DisconnectPeripheral(_hm10, (address) =>
-        //                     {
-        //                         BluetoothLEHardwareInterface.DeInitialize(() =>
-        //                         {
-
-        //                             _connected = false;
-        //                             _state = States.None;
-        //                         });
-        //                     });
-        //                 }
-        //                 else
-        //                 {
-        //                     BluetoothLEHardwareInterface.DeInitialize(() =>
-        //                     {
-
-        //                         _state = States.None;
-        //                     });
-        //                 }
-        //                 break;
-        //         }
-        //     }
-        // }
     }
 
     string FullUUID(string uuid)
