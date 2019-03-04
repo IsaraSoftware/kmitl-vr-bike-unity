@@ -32,11 +32,9 @@ public class BezierWalker : MonoBehaviour
 
     void Update()
     {
-        if (GetComponent<ArduinoHM10Test>().GetLocal())
-        {
+        if (GetComponent<PlayerController>().isLocalPlayer)
             InterpolatePositionAndRotation(progress);
-
-        }
+        
 
         if (progress > 1)
             progress = 0;

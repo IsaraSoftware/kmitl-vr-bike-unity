@@ -12,19 +12,20 @@ using UnityEngine.VR;
 using UnityEngine.SceneManagement;
 using UnityEngine.Networking;
 
-public class ArduinoHM10Test : NetworkBehaviour
+public class ArduinoHM10Test : MonoBehaviour
 {
     public string DeviceName = "Wahoo SPEED";
     public string ServiceUUID = "1816";
     public string Characteristic = "2A5B";
 
-    public Text HM10_Status;
+    public Text statusText;
     public Text BluetoothStatus;
     public GameObject PanelMiddle;
     public Text TextToSend;
     public PlayerController player;
 
     private bool mutexLock = false;
+    private int bleCount = 1;
 
     enum States
     {
@@ -36,8 +37,6 @@ public class ArduinoHM10Test : NetworkBehaviour
         Disconnect,
         Communication,
     }
-    [SyncVar]
-    public int playersConnected;
 
     private bool _workingFoundDevice = true;
     private bool _connected = false;
@@ -108,49 +107,27 @@ public class ArduinoHM10Test : NetworkBehaviour
     void Start()
     {
         Debug.Log("Start");
-        //HM10_Status.text = "";
-        //UnityEngine.XR.XRSettings.enabled = false;
-        //StartProcess();
+ 
+        StartProcess();
     }
 
     void Awake()
     {
         //HM10_Status.text = "";
         Debug.Log("Start BLE");
-        StartProcess();
+       // StartProcess();
         DontDestroyOnLoad(this.gameObject);
     }
 
     // Update is called once per frame
-    int GetConnectionCount()
-    {
-        int count = 0;
-        foreach (NetworkConnection con in NetworkServer.connections)
-        {
-            if (con != null)
-                count++;
-        }
-        return count;
-    }
+ 
 
 
-    public bool GetLocal()
-    {
-        return isLocalPlayer;
-    }
     void Update()
     {
 
 
-
-        
-
-
-
-
-
-
-
+        Debug.Log("BLE Still Exist");
         if (_timeout > 0f)
         {
             _timeout -= Time.deltaTime;
@@ -164,6 +141,9 @@ public class ArduinoHM10Test : NetworkBehaviour
                         break;
 
                     case States.Scan:
+
+                        statusText = GameObject.Find("Status Text").GetComponent<Text>();
+                        statusText.text = "Scanning";
                         //BluetoothStatus.text = "Scanning for Wahoo SPEED devices...";
                         Debug.Log("Scanning");
                         BluetoothLEHardwareInterface.ScanForPeripheralsWithServices(null, (address, name) =>
@@ -175,13 +155,12 @@ public class ArduinoHM10Test : NetworkBehaviour
                             DeviceName = "Wahoo SPEED";
                             Debug.Log("Name:" + DeviceName);
                             Debug.Log("NameName:" + name);
-                            if (name.Contains(DeviceName))
+                        if (name.Contains(DeviceName) && bleCount <= 3 )
                             {
                                 _workingFoundDevice = true;
-
+                                statusText.text = "Found " + name;
                                 // it is always a good idea to stop scanning while you connect to a device
                                 // and get things set up
-                                BluetoothLEHardwareInterface.StopScan();
                                 //BluetoothStatus.text = "";
 
                                 // add it to the list and set to connect to it
@@ -190,8 +169,13 @@ public class ArduinoHM10Test : NetworkBehaviour
                                 Debug.Log(_hm10);
 
                                 //HM10_Status.text = "Found Wahoo SPEED";
+                                GameObject button = GameObject.Find("BLE"+bleCount);
+                                Button butt = button.GetComponent<Button>();
+                                butt.onClick.AddListener(delegate { Connect(address); });
+                                button.GetComponentInChildren<Text>().text = name;
+                                bleCount++;
 
-                                SetState(States.Connect, 0.5f);
+                                //SetState(States.Connect, 0.5f);
 
                                 _workingFoundDevice = false;
                             }
@@ -202,7 +186,7 @@ public class ArduinoHM10Test : NetworkBehaviour
                     case States.Connect:
                         // set these flags
                         _foundID = false;
-
+                        statusText.text = "Connecting";
                         //HM10_Status.text = "Connecting to Wahoo SPEED";
                         Debug.Log("Beep Boop Connect mode Avtivated!!");
                         // note that the first parameter is the address, not the name. I have not fixed this because
@@ -233,6 +217,7 @@ public class ArduinoHM10Test : NetworkBehaviour
                                 {
                                     _connected = true;
                                     SetState(States.Subscribe, 2f);
+                                    statusText.text = "Connected";
 
                                    // HM10_Status.text = "Connected to Wahoo SPEED";
                                 }
@@ -246,23 +231,20 @@ public class ArduinoHM10Test : NetworkBehaviour
 
                     case States.Subscribe:
                         //HM10_Status.text = "Subscribing to Wahoo SPEED CSC service";
-
+                        statusText.text = "Subscribing";
+                        Debug.Log("BLE Working");
                         BluetoothLEHardwareInterface.SubscribeCharacteristicWithDeviceAddress(_hm10, ServiceUUID, Characteristic, null, (address, characteristicUUID, bytes) =>
                         {
-                            if (!mutexLock)
-                            {
-                                mutexLock = true;
+
                                 String inp = BitConverter.ToString(bytes);
                                 Debug.Log(inp);
                                 Debug.Log("Active Scene" + SceneManager.GetActiveScene().name);
                                 //HM10_Status.text = BitConverter.ToString(bytes);
-                                if (SceneManager.GetActiveScene().name != "Game")
+                                if (SceneManager.GetActiveScene().name == "ArduinoHM10Test")
                                 {
-                                    GetComponent<BezierWalker>().enabled = false;
-                                    SceneManager.LoadScene("Game");
-                                    UnityEngine.XR.XRSettings.enabled = true;
-                                    
-                                    print("Load Game");
+                                    //GetComponent<BezierWalker>().enabled = false;
+                                    SceneManager.LoadScene("Start");
+                                    print("Load Start");
 
 
                                 }
@@ -271,12 +253,6 @@ public class ArduinoHM10Test : NetworkBehaviour
 
                                 if (SceneManager.GetActiveScene().name == "Game")
                                 {
-                                    GetComponent<BezierWalker>().enabled = true;
-                                    
-                                    player = GetComponent<PlayerController>();
-                                    player.SetConection(true);
-                                    print("Player ID:" + this.netId);
-                                    GetComponent<BezierWalker>().SetSlineID(int.Parse(this.netId.ToString()) - 1);
                                     if (inp != lastInp)
                                     {
                                         player.SetSpeed(1f);
@@ -289,9 +265,7 @@ public class ArduinoHM10Test : NetworkBehaviour
 
 
                                 }
-                                mutexLock = false;
-
-                            }
+                               
 
 
 
@@ -376,5 +350,13 @@ public class ArduinoHM10Test : NetworkBehaviour
 
             BluetoothLEHardwareInterface.Log("Write Succeeded");
         });
+    }
+
+    void Connect(string addr)
+    {
+        _hm10 = addr;
+        BluetoothLEHardwareInterface.StopScan();
+        SetState(States.Connect, 0.5f);
+
     }
 }

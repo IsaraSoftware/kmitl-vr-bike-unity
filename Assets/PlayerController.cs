@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Networking;
+using UnityEngine.UI;
 
-public class PlayerController : MonoBehaviour
+public class PlayerController : NetworkBehaviour
 {
     // Start is called before the first frame update
     private Animator animator;
@@ -21,6 +23,11 @@ public class PlayerController : MonoBehaviour
         walkerComp = GetComponent<BezierWalker>();
         progess = 0f;
         isConnect = false;
+        //DontDestroyOnLoad(this.gameObject);
+        GetComponent<BezierWalker>().enabled = true;
+        GetComponent<BezierWalker>().SetSlineID(int.Parse(this.netId.ToString()) - 1);
+        GameObject.Find("BLE").GetComponent<ArduinoHM10Test>().player = this;
+
 
     }
 
@@ -55,11 +62,13 @@ public class PlayerController : MonoBehaviour
         // else {
         //     this.SetSpeed(0f);
         // }
-        if(SceneManager.GetActiveScene().name == "ArduinoHM10Test" && gameObject.GetComponent<ArduinoHM10Test>().enabled == false)
+        if(isLocalPlayer && !cam.active)
         {
-            Debug.Log("Create BLE");
-            gameObject.GetComponent<ArduinoHM10Test>().enabled = true;
+            cam.SetActive(true);
         }
+
+
+
         Debug.Log("Speed: " + this.speed);
         animator.speed = this.speed;
         //this.transform.position += new Vector3(0,0, 0.1f)
