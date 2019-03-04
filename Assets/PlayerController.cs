@@ -24,9 +24,14 @@ public class PlayerController : NetworkBehaviour
         progess = 0f;
         isConnect = false;
         //DontDestroyOnLoad(this.gameObject);
-        GetComponent<BezierWalker>().enabled = true;
-        GetComponent<BezierWalker>().SetSlineID(int.Parse(this.netId.ToString()) - 1);
-        GameObject.Find("BLE").GetComponent<ArduinoHM10Test>().player = this;
+        if(isLocalPlayer)
+        {
+            GetComponent<BezierWalker>().enabled = true;
+            GetComponent<BezierWalker>().SetSlineID(int.Parse(this.netId.ToString()) - 1);
+            GameObject.Find("BLE").GetComponent<ArduinoHM10Test>().player = this;
+
+
+        }
 
 
     }

@@ -280,11 +280,13 @@ public class ArduinoHM10Test : MonoBehaviour
                         break;
 
                     case States.Unsubscribe:
+                        Debug.Log("Unsubscribe");
                         BluetoothLEHardwareInterface.UnSubscribeCharacteristic(_hm10, ServiceUUID, Characteristic, null);
                         SetState(States.Disconnect, 4f);
                         break;
 
                     case States.Disconnect:
+                        Debug.Log("Disconnected");
                         if (_connected)
                         {
                             BluetoothLEHardwareInterface.DisconnectPeripheral(_hm10, (address) =>
