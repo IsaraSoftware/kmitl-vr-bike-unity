@@ -65,7 +65,7 @@ public class BezierWalker : MonoBehaviour
     private void InterpolatePositionAndRotation(float percent)
     {
 
-
+       
         float normalizedT = MapPercentToBeziereRatio(progress);
         Vector3 resultPosition = spline.GetPoint(normalizedT);
 

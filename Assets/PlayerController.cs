@@ -11,13 +11,19 @@ public class PlayerController : NetworkBehaviour
     private Animator animator;
     private BezierWalker walkerComp;
 
+    
+
     public GameObject cam;
 
     private bool isConnect = false;
     float progess;
     private float speed = 0f;
+    private bool byPass = false;
+    private bool restart = false;
+
     void Start()
     {
+        print("Born");
         cam.SetActive(false);
         animator = GetComponentInChildren(typeof(Animator), true) as Animator;
         walkerComp = GetComponent<BezierWalker>();
@@ -26,10 +32,22 @@ public class PlayerController : NetworkBehaviour
         //DontDestroyOnLoad(this.gameObject);
         if(isLocalPlayer)
         {
+          
             GetComponent<BezierWalker>().enabled = true;
             GetComponent<BezierWalker>().SetSlineID(int.Parse(this.netId.ToString()) - 1);
-            GameObject.Find("BLE").GetComponent<ArduinoHM10Test>().player = this;
+            print(GameObject.Find("BLE"));
+            SetConection(true);
+            if (GameObject.Find("BLE"))
+            {
+                GameObject.Find("BLE").GetComponent<ArduinoHM10Test>().player = this;
+                if (GameObject.Find("BLE").GetComponent<ArduinoHM10Test>().byPass)
+                {
+                    byPass = true;
+                }
 
+
+            }
+           
 
         }
 
@@ -58,19 +76,47 @@ public class PlayerController : NetworkBehaviour
     {
         return isConnect;
     }
+
+    IEnumerator HostStart(int time)
+    {
+        yield return new WaitForSeconds(time);
+        this.speed = 0.75f;
+    }
+
+    IEnumerator Restart(int time)
+    {
+        restart = true;
+        yield return new WaitForSeconds(time);
+        this.progess = 0;
+        restart = false;
+
+    }
     void Update()
     {
+        print(NetworkClient.allClients.Count);
+        //print(NetworkServer.connections.Count);
+        if(NetworkServer.connections.Count > 1 && byPass)
+        {
+            StartCoroutine(HostStart(5));
+        }
+
+        if(NetworkServer.connections.Count == 0  && NetworkClient.allClients.Count == 1 && byPass)
+        {
+            StartCoroutine(HostStart(0));
+        }
+        //this.speed = 3f;
         // if(Input.GetKey("space")){
-        //     this.SetSpeed(1f);
+        //     this.SetSpeed(0.75f);
         //     print("INN");
         // }
         // else {
         //     this.SetSpeed(0f);
         // }
-        if(isLocalPlayer && !cam.active)
-        {
-            cam.SetActive(true);
-        }
+        //if(isLocalPlayer && !cam.active)
+        //{
+        //    cam.SetActive(true);
+        //}
+        this.SetSpeed(this.speed);
 
 
 
@@ -78,6 +124,10 @@ public class PlayerController : NetworkBehaviour
         animator.speed = this.speed;
         //this.transform.position += new Vector3(0,0, 0.1f)
         this.progess += 0.02319f * this.speed * Time.deltaTime;
+        if(this.progess >= 1 && !restart)
+        {
+            StartCoroutine(Restart(41));
+        }
         walkerComp.SetProgress(this.progess);
         //walkerComp.SetProgress(Mathf.Lerp(walkerComp.GetProgress(), this.progess, Time.deltaTime));
     }

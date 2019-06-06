@@ -26,6 +26,7 @@ public class ArduinoHM10Test : MonoBehaviour
 
     private bool mutexLock = false;
     private int bleCount = 1;
+    public bool byPass = false;
 
     enum States
     {
@@ -119,15 +120,24 @@ public class ArduinoHM10Test : MonoBehaviour
         DontDestroyOnLoad(this.gameObject);
     }
 
+    public void ByPass()
+    {
+        byPass = true;
+        SceneManager.LoadScene("Start");
+
+    }
+
     // Update is called once per frame
- 
+
+
 
 
     void Update()
     {
-
-
-        Debug.Log("BLE Still Exist");
+        if(byPass)
+        {
+            return;
+        }
         if (_timeout > 0f)
         {
             _timeout -= Time.deltaTime;
@@ -255,7 +265,7 @@ public class ArduinoHM10Test : MonoBehaviour
                                 {
                                     if (inp != lastInp)
                                     {
-                                        player.SetSpeed(1f);
+                                        player.SetSpeed(0.75f);
                                         lastInp = inp;
                                     }
                                     else
